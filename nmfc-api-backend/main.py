@@ -8,7 +8,7 @@ import numpy as np
 
 app = FastAPI()
 
-# Enable CORS for frontend
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,21 +19,18 @@ app.add_middleware(
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Dummy NMFC item list
 nmfc_items = [
     {"code": "156600", "description": "Plastic bottles, 1L, filled, boxed"},
     {"code": "114620", "description": "Electric motors, 2HP, palletized"},
     {"code": "79320", "description": "Flat-packed wooden desks, crated"}
 ]
 
-# Only embed when called, not on startup
 def embed(text):
     try:
         response = openai.Embedding.create(input=text, model="text-embedding-ada-002")
         return np.array(response['data'][0]['embedding'], dtype='float32')
     except Exception as e:
-        print("❌ OpenAI embedding failed:", str(e))
-        raise
+        raise RuntimeError(f"Embedding failed: {str(e)}")
 
 class InputData(BaseModel):
     material: str
@@ -74,5 +71,9 @@ def classify(data: InputData):
             "matched_description": match["description"],
             "confidence_score": float(D[0][0])
         }
+
     except Exception as e:
-        return {"error": f"Failed to classify: {str(e)}"}
+        return {
+            "error": "Failed to classify.",
+            "details": str(e)
+        }
